@@ -9,6 +9,22 @@ The three hook types:
 - **PostToolCall**: Runs after a tool completes
 - **StopHook**: Runs when the agent is about to stop (before returning the final result)
 
+## When to Recommend Hooks (Not Prompts)
+
+Most people try to control agent behavior through the system prompt — "always validate before refunding," "always format dates consistently." But prompts are suggestions, not guarantees. Hooks are code — they execute deterministically every time.
+
+**Use hooks when the requirement involves:**
+
+| Domain | Why prompts aren't enough | Hook type |
+|--------|--------------------------|-----------|
+| **Money / billing** | A prompt saying "don't refund over $500" will eventually be bypassed by a creative user message or edge case. A PreToolCall hook that checks `amount <= 500` will not. | PreToolCall |
+| **Security / access control** | Path traversal, privilege escalation, unauthorized operations — these need hard boundaries, not soft guidelines. | PreToolCall |
+| **Data integrity / normalization** | Inconsistent data formats (dates, currencies, IDs) from tools cause hallucination and downstream errors. Cleaning data before Claude sees it is more reliable than asking Claude to handle inconsistency. | PostToolCall |
+| **Compliance / PII** | Regulations don't accept "the model usually follows the instruction." PII scrubbing, audit logging, and sensitive data handling require deterministic enforcement. | PostToolCall, StopHook |
+| **Exit conditions** | "Keep going until the ticket is actually resolved" can't be reliably enforced by prompt alone — Claude will say "done" when it *thinks* it's done. A StopHook can verify against external state. | StopHook |
+
+**The rule of thumb**: If a failure in this behavior would cause a security incident, financial loss, compliance violation, or data corruption — use a hook. If it would just produce a suboptimal but harmless response — a prompt instruction is fine.
+
 ## PreToolCall Hooks
 
 Use PreToolCall for **validation and approval gates** — things that must be checked before an action is taken.
@@ -70,6 +86,18 @@ const toolLogger: PostToolCallHook = {
       timestamp: new Date().toISOString(),
     });
     // PostToolCall hooks don't modify the output — they observe it
+  },
+};
+
+// Data normalization: Clean inconsistent tool output before Claude sees it
+const dataNormalizer: PostToolCallHook = {
+  name: "data-normalizer",
+  async run({ toolName, toolOutput }) {
+    if (toolName === "query_crm") {
+      // Normalize dates, currencies, phone numbers etc.
+      // Claude works with clean, consistent data → fewer hallucinations
+      return normalizeRecords(toolOutput);
+    }
   },
 };
 
