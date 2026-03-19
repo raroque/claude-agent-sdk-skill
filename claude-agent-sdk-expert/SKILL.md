@@ -1,17 +1,16 @@
 ---
 name: claude-agent-sdk-expert
 description: |
-  Activate when reviewing or building AI agents, or when the conversation involves:
-  agent, tool_use, MCP, subagent, hooks, stop_reason, agentic loop, Claude SDK,
-  claude_agent_sdk, @anthropic-ai/sdk agent, multi-agent, tool design, structured output,
-  context window management, PreToolCall, PostToolCall, StopHook, max_tokens handling,
-  agent architecture, coordinator pattern, tool_choice, agent reliability, agent error handling.
-  Also activate when the user asks for help building a Claude agent, reviewing agent code,
-  or debugging agent behavior.
+  Use when reviewing, debugging, or building AI agents with the Claude Agent SDK (TypeScript or Python).
+  Covers the Agent class, query(), agent.stream(), tool_use, tool schemas, maxIterations, subagents,
+  hooks (PreToolCall, PostToolCall, StopHook), MCP integration, multi-agent coordination, structured output,
+  context window management, stop_reason handling, and agentic loop architecture.
+  Do NOT activate for general Claude API usage without agents, simple messages.create() calls,
+  or non-agent Anthropic SDK usage — use the claude-api skill for those.
 license: MIT
 metadata:
   author: Chris Raroque
-  version: "1.0"
+  version: "1.1"
 ---
 
 # Claude Agent SDK Expert
@@ -26,7 +25,25 @@ AI-assisted agent development introduces characteristic failure modes that tradi
 
 ## Process
 
-Work through each step below. For each step, load the referenced file **only if relevant** to the current task. Skip steps that don't apply.
+Work through each step below. Step 0 is **always loaded**. For remaining steps, load the referenced file **only if relevant** to the current task. Skip steps that don't apply.
+
+### Step 0: Known Gotchas (Always Load)
+
+Before any deep review or build, scan for the top 10 most common agent mistakes. These are fast to check and catch the majority of production incidents.
+
+```
+Read file: references/gotchas.md
+```
+
+### Quick Scan (Review Mode)
+
+For code reviews, run the static analysis script first to surface mechanical anti-patterns before doing a manual review. This catches issues like missing `maxIterations`, `tool_choice: "any"`, silent catch blocks, and missing `additionalProperties: false`.
+
+```bash
+bash scripts/scan-agent-patterns.sh <target-directory>
+```
+
+Review the output, then proceed with the manual steps below for deeper analysis.
 
 ### Step 1: Agentic Loop Architecture
 
@@ -110,6 +127,11 @@ Read file: references/multi-agent.md
    - **Build mode**: Help write new agent code. Follow the process steps as a checklist to ensure nothing is missed.
 5. **Show, don't tell.** Every finding or recommendation must include a concrete code example — before/after for reviews, working snippets for builds.
 6. **Ground in SDK reality.** Reference actual SDK APIs (`query()`, `tool_use`, `stop_reason`, hooks, etc.). Do not invent APIs that don't exist.
+7. **Maintain the review log.** After completing a review or build session, append a one-line JSON entry to `data/review-log.jsonl`:
+   ```json
+   {"date":"YYYY-MM-DD","mode":"review|build","project":"project-name","sdk":"ts|py","findings":["finding1","finding2"],"severity_counts":{"critical":0,"high":0,"medium":0,"low":0}}
+   ```
+   At session start, if `data/review-log.jsonl` exists, read it and note recurring patterns across past sessions to inform the current review.
 
 ## Output Format
 
@@ -153,6 +175,7 @@ Structure output as:
 
 | # | Topic | File |
 |---|-------|------|
+| 0 | **Gotchas (Always Load)** | `references/gotchas.md` |
 | 1 | Agentic Loop Architecture | `references/agentic-loop.md` |
 | 2 | Tool Design & Scoping | `references/tool-design.md` |
 | 3 | Prompt Engineering | `references/prompt-engineering.md` |

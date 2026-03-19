@@ -59,6 +59,7 @@ $claude-agent-sdk-expert
 
 | Category | Key Catches |
 |----------|-------------|
+| **Gotchas (Always Loaded)** | Top 10 most common mistakes — missing `maxIterations`, silent catches, manual loops, `tool_choice: "any"`, and more |
 | **Agentic Loop** | Reimplemented loops, missing iteration guards, ignored `max_tokens` truncation |
 | **Tool Design** | Vague descriptions, too many tools, side-effect-only tools, unbounded output |
 | **Prompt Engineering** | Over-prompting, buried critical rules, missing stopping criteria |
@@ -68,6 +69,24 @@ $claude-agent-sdk-expert
 | **Error Handling** | Opaque errors, silent failures, infinite retry loops, missing timeouts |
 | **Hooks & Lifecycle** | Business logic in hooks, blocking without timeout, StopHook infinite loops |
 | **Multi-Agent** | Circular delegation, subagents knowing each other, premature multi-agent |
+
+## Quick Scan
+
+The skill includes a static analysis script that greps for common anti-patterns before a manual review. No dependencies required — it's a portable bash script.
+
+```bash
+bash claude-agent-sdk-expert/scripts/scan-agent-patterns.sh ./my-agent-project
+```
+
+Output format: `[PATTERN_NAME] file:line — description`. Catches missing `maxIterations`, `tool_choice: "any"`, silent catch blocks, missing `additionalProperties: false`, short tool descriptions, manual agentic loops, and JSON.parse on text output.
+
+The script is informational (always exits 0) — it's a fast first pass, not a gate.
+
+## Session Memory (Review Log)
+
+The skill maintains a review log at `claude-agent-sdk-expert/data/review-log.jsonl`. After each review or build session, a one-line JSON entry is appended with the date, mode, project, SDK language, findings, and severity counts. On subsequent sessions, the skill reads this log to identify recurring patterns across reviews.
+
+The log files are git-ignored so they stay local to your machine.
 
 ## Contributing
 

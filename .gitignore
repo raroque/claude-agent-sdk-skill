@@ -7,3 +7,7 @@ node_modules/
 *.swp
 *.swo
 *~
+
+# Skill session data (review logs)
+claude-agent-sdk-expert/data/*.log
+claude-agent-sdk-expert/data/*.jsonl
