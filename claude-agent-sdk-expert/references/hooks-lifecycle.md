@@ -25,6 +25,43 @@ Most people try to control agent behavior through the system prompt — "always 
 
 **The rule of thumb**: If a failure in this behavior would cause a security incident, financial loss, compliance violation, or data corruption — use a hook. If it would just produce a suboptimal but harmless response — a prompt instruction is fine.
 
+## Defense in Depth: Prompts + Hooks + Tool Validation
+
+For high-stakes operations, use all three layers together:
+
+1. **Prompt** — Sets the policy. Tells Claude the rules so it makes correct decisions most of the time: *"Never process refunds over $500."*
+2. **PreToolCall hook** — Enforces the gate. Blocks the call before the tool even runs: checks amount, validates order, confirms eligibility.
+3. **Tool implementation** — Enforces during execution. The tool's own code validates inputs as a final backstop.
+
+No single layer is sufficient alone. Prompts can be circumvented by edge cases or prompt injection. Hooks can be misconfigured. Tool validation catches anything that slips through. Three layers, zero gaps.
+
+```typescript
+// Layer 1: Prompt
+const instructions = "Never process refunds over $500. Escalate to a manager instead.";
+
+// Layer 2: PreToolCall hook
+const refundGate: PreToolCallHook = {
+  name: "refund-limit",
+  async run({ toolName, toolInput }) {
+    if (toolName === "process_refund" && toolInput.amount > 500) {
+      return { decision: "block", message: "Refund exceeds $500 limit. Suggest escalation." };
+    }
+    return { decision: "allow" };
+  },
+};
+
+// Layer 3: Tool implementation
+async function processRefund(input: { orderId: string; amount: number }) {
+  if (input.amount > 500) {
+    return { error: "Refund amount exceeds $500 limit. Escalate to manager." };
+  }
+  const order = await db.getOrder(input.orderId);
+  if (!order) return { error: `Order ${input.orderId} not found.` };
+  if (daysSince(order.date) > 90) return { error: "Order older than 90 days. Escalate." };
+  return await paymentSystem.refund(input.orderId, input.amount);
+}
+```
+
 ## PreToolCall Hooks
 
 Use PreToolCall for **validation and approval gates** — things that must be checked before an action is taken.

@@ -47,6 +47,10 @@ Only delegate to subagents — do not read or modify files directly.`,
 
 ## Context Passing
 
+**Subagents start with a blank context.** They have no memory of the coordinator's conversation, no access to what the user said, and no knowledge of what other subagents have done. Every piece of information a subagent needs must be explicitly passed in the spawn/query call.
+
+If the coordinator learned the customer's order is #12345, the refund amount is $47.99, and the reason is "item damaged" — the subagent knows **none of this** unless you pass it. Without explicit context, subagents will either ask the user to repeat information (bad UX), hallucinate the missing details (dangerous), or fail silently with wrong data.
+
 Pass only what each subagent needs. Over-sharing context wastes tokens and can confuse the subagent.
 
 ```typescript

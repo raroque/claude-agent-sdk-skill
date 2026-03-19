@@ -118,7 +118,36 @@ Use non-streaming when:
 
 ## Anti-Patterns to Detect
 
-1. **Reimplementing the loop**: Writing your own while loop around raw API calls instead of using `Agent.query()`. The SDK handles tool execution, error recovery, and iteration correctly — don't reinvent it.
+1. **Parsing natural language for control flow**: Using string matching, regex, or keyword checks on Claude's text output to decide what the agent does next. This is fundamentally fragile — Claude's phrasing varies every time.
+
+```typescript
+// BAD: Parsing text to decide control flow
+const response = await claude.messages.create({ ... });
+const text = response.content[0].text;
+
+if (text.toLowerCase().includes("check order")) {
+  checkOrder();
+} else if (text.toLowerCase().includes("escalate")) {
+  escalate();
+}
+// Claude might say "let's look into the order" or "get a human involved"
+// — your string matching misses it, the agent stalls
+
+// GOOD: Use tool_use and stop_reason — structured, deterministic
+const response = await claude.messages.create({ ..., tools });
+
+if (response.stop_reason === "tool_use") {
+  // Claude chose a specific tool with structured JSON input
+  const toolCall = response.content.find(b => b.type === "tool_use");
+  const result = executeTool(toolCall.name, toolCall.input);
+} else if (response.stop_reason === "end_turn") {
+  return response.content[0].text; // Claude is done
+}
+```
+
+Control flow should always be driven by `stop_reason` and `tool_use` content blocks, never by parsing free text. If you need structured decisions from Claude, define tools that represent those decisions.
+
+2. **Reimplementing the loop**: Writing your own while loop around raw API calls instead of using `Agent.query()`. The SDK handles tool execution, error recovery, and iteration correctly — don't reinvent it.
 
 2. **No iteration guard**: Missing `maxIterations` means a confused model can loop forever, burning tokens and time.
 
